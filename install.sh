@@ -220,7 +220,7 @@ create_lxc() {
     NET="$NET,ip=$CT_IP,gw=$CT_GW"
   fi
   local DNS_OPT=""
-  [[ -n "$CT_DNS" ]] && DNS_OPT="--nameserver $CT_DNS"
+  [[ -n "${CT_DNS:-}" ]] && DNS_OPT="--nameserver $CT_DNS"
 
   pct create "$CT_ID" "$TEMPLATE" \
     --hostname "$CT_HOSTNAME" \
@@ -323,7 +323,7 @@ write_caddyfile() {
   local AUTH_HASH
   AUTH_HASH=$(ct "caddy hash-password --plaintext '$AUTH_PASS'")
   local LISTEN
-  LISTEN=$(echo "$CT_IP" | cut -d/ -f1)
+  LISTEN=$(echo "${CT_IP:-}" | cut -d/ -f1)
   [[ -z "$LISTEN" ]] && LISTEN=$(ct "hostname -I | awk '{print \$1}'")
 
   local TMP=$(mktemp)
@@ -351,7 +351,7 @@ start_services() {
 # ───────────────────────────────────────────────────────────────────────
 print_handoff() {
   local LISTEN
-  LISTEN=$(echo "$CT_IP" | cut -d/ -f1)
+  LISTEN=$(echo "${CT_IP:-}" | cut -d/ -f1)
   [[ -z "$LISTEN" ]] && LISTEN=$(ct "hostname -I | awk '{print \$1}'")
 
   whiptail --backtitle "$W_BACKTITLE" --title "Deploy SSH key to mailserver" \
