@@ -17,10 +17,11 @@ CM=" ${GN}✓${CL}"; CR=" ${RD}✗${CL}"; IN=" ${BL}ℹ${CL}"; AR=" ${YW}»${CL}
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-trap 'on_error $LINENO $?' ERR
+trap 'on_error $LINENO $? "${BASH_COMMAND}"' ERR
 on_error() {
   echo
   echo -e "${CR} ${RD}installation failed at line $1 (exit $2)${CL}"
+  echo -e "${CR} ${RD}failed command: ${3}${CL}"
   echo -e "${IN} See output above for details."
   exit "$2"
 }
@@ -80,10 +81,16 @@ wizard() {
 You'll be guided through ~10 questions. Defaults work for most setups."
 
   # ── LXC basics ──
+  local default_id
+  default_id=$(pvesh get /cluster/nextid 2>/dev/null || true)
+  [[ -z "$default_id" ]] && default_id=130
   CT_ID=$(wt_input "Container ID" "Pick a free LXC ID (Proxmox VMID).
- Existing IDs are reserved — pick anything between 100 and 999." "$(pvesh get /cluster/nextid 2>/dev/null || echo 130)")
+ Existing IDs are reserved — pick anything between 100 and 999." "$default_id")
+  [[ -z "$CT_ID" ]] && fail "Container ID cannot be empty."
 
-  if pct status "$CT_ID" >/dev/null 2>&1; then
+  local pct_rc=0
+  pct status "$CT_ID" >/dev/null 2>&1 || pct_rc=$?
+  if [[ $pct_rc -eq 0 ]]; then
     fail "LXC $CT_ID already exists. Pick a different ID."
   fi
 
