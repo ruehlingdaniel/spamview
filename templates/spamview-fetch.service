@@ -1,0 +1,12 @@
+[Unit]
+Description=SpamView fetch from mailserver
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/spamview
+ExecStart=/usr/bin/node /opt/spamview/fetch.js
+EnvironmentFile=-/etc/spamview.env
+StandardOutput=journal
+StandardError=journal

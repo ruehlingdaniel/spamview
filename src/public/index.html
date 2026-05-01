@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SpamView · Ops Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">S</div>
+    <div>
+      <h1>spam<span class="accent">view</span></h1>
+      <div class="subtitle" id="subtitle">— · ops console</div>
+    </div>
+  </div>
+  <div class="topbar-meta">
+    <div class="live-dot">live</div>
+    <div class="last-fetch" id="lastFetch">—</div>
+    <button class="btn-ghost" id="refreshBtn">↻ reload</button>
+  </div>
+</header>
+
+<div class="statusbar">
+  <div class="statusbar-track">
+    <div class="statusbar-item"><span class="statusbar-key">node</span> <span class="statusbar-val">spamview-130</span></div>
+    <div class="statusbar-item"><span class="statusbar-key">window</span> <span class="statusbar-val" id="sbWindow">7d</span></div>
+    <div class="statusbar-item"><span class="statusbar-key">rejects/h</span> <span class="statusbar-val" id="sbRate">—</span></div>
+    <div class="statusbar-item"><span class="statusbar-key">phishing 7d</span> <span class="statusbar-val alert" id="sbPhish">—</span></div>
+    <div class="statusbar-item"><span class="statusbar-key">brand-spoofs 7d</span> <span class="statusbar-val alert" id="sbBrand">—</span></div>
+    <div class="statusbar-item"><span class="statusbar-key">ai</span> <span class="statusbar-val ok" id="sbAi">—</span></div>
+  </div>
+</div>
+
+<main>
+
+  <section class="kpis">
+    <div class="kpi" data-source="all">
+      <div class="kpi-label">total · 7d</div>
+      <div class="kpi-value num" id="kpiAll">—</div>
+      <div class="kpi-trend" id="kpiTrend">— rejects per hour avg</div>
+    </div>
+    <div class="kpi" data-source="postscreen">
+      <div class="kpi-label">postscreen</div>
+      <div class="kpi-value num" id="kpiPostscreen">—</div>
+      <div class="kpi-trend">smtp-pre-banner</div>
+    </div>
+    <div class="kpi" data-source="rspamd">
+      <div class="kpi-label">rspamd</div>
+      <div class="kpi-value num" id="kpiRspamd">—</div>
+      <div class="kpi-trend">content-scan</div>
+    </div>
+    <div class="kpi" data-source="quarantine">
+      <div class="kpi-label">quarantine</div>
+      <div class="kpi-value num" id="kpiQuarantine">—</div>
+      <div class="kpi-trend">held-back</div>
+    </div>
+  </section>
+
+  <section class="insights-card" id="insightsCard">
+    <div class="insights-header">
+      <h3>insights · gemini-2.5-flash</h3>
+      <div class="insights-controls">
+        <select id="insightsDays">
+          <option value="1">24h</option>
+          <option value="7" selected>7d</option>
+          <option value="14">14d</option>
+          <option value="30">30d</option>
+        </select>
+        <button id="insightsRefresh">↻ neu</button>
+      </div>
+    </div>
+    <div id="insightsBody" class="insights-body">
+      <span class="insights-placeholder">init…</span>
+    </div>
+  </section>
+
+  <div class="section-label">activity</div>
+
+  <section class="cards">
+    <div class="card">
+      <h3 class="card-title">timeline · 14d <span class="card-aside">stacked by source</span></h3>
+      <div class="chart-wrap"><canvas id="chartDaily"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 class="card-title">categories · 7d</h3>
+      <div id="catBars" class="bars"></div>
+    </div>
+  </section>
+
+  <div class="section-label">attackers</div>
+
+  <section class="cards equal">
+    <div class="card">
+      <h3 class="card-title">top senders · 7d</h3>
+      <div id="topSenders" class="list"></div>
+    </div>
+    <div class="card">
+      <h3 class="card-title">top source ips · 7d</h3>
+      <div id="topIps" class="list"></div>
+    </div>
+  </section>
+
+  <div class="section-label">events log</div>
+
+  <section class="filterbar">
+    <input type="search" id="search" placeholder="filter: sender, recipient, ip, subject, helo…">
+    <select id="filterSource">
+      <option value="">all sources</option>
+      <option value="postscreen">postscreen</option>
+      <option value="rspamd">rspamd</option>
+      <option value="quarantine">quarantine</option>
+    </select>
+    <select id="filterCategory">
+      <option value="">all categories</option>
+    </select>
+    <select id="filterDays">
+      <option value="1">24h</option>
+      <option value="7" selected>7d</option>
+      <option value="14">14d</option>
+      <option value="30">30d</option>
+      <option value="">all</option>
+    </select>
+    <span class="result-count" id="resultCount"></span>
+  </section>
+
+  <section class="table-wrap">
+    <table id="table">
+      <thead>
+        <tr>
+          <th class="col-expand"></th>
+          <th class="col-time">last seen</th>
+          <th class="col-count">×</th>
+          <th class="col-source">source</th>
+          <th class="col-cat">category</th>
+          <th class="col-from">from</th>
+          <th class="col-subject">subject / reason</th>
+          <th class="col-score">score</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="pager">
+      <span id="pageInfo">—</span>
+      <div class="pager-controls">
+        <button id="prevPage">← prev</button>
+        <button id="nextPage">next →</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="modal" id="modal">
+  <div class="modal-card">
+    <button class="modal-close" id="modalClose">×</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

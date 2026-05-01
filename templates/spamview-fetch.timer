@@ -1,0 +1,10 @@
+[Unit]
+Description=SpamView pull every %%PULL_INTERVAL%%
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=%%PULL_INTERVAL%%
+Unit=spamview-fetch.service
+
+[Install]
+WantedBy=timers.target

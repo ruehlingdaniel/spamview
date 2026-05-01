@@ -1,0 +1,21 @@
+[Unit]
+Description=SpamView - Mailcow Reject Analysis
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/spamview
+ExecStart=/usr/bin/node /opt/spamview/server.js
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3050
+Environment=HOST=127.0.0.1
+EnvironmentFile=-/etc/spamview.env
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
