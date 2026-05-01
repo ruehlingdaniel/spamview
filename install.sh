@@ -7,7 +7,7 @@
 # Creates a Debian 13 LXC, installs Node.js + Caddy, deploys SpamView, and
 # configures it to pull reject data from your Mailcow server.
 
-set -Eeuo pipefail
+set -euo pipefail
 
 # ───────────────────────────────────────────────────────────────────────
 # Style
