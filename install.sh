@@ -57,15 +57,14 @@ need_root_pve() {
   command -v pct        >/dev/null 2>&1 || fail "pct (Proxmox container tool) not found."
 }
 
-# whiptail wrappers — return on cancel
+# whiptail wrappers — exit cleanly on cancel
 W_BACKTITLE="SpamView Installer"
-wt_yesno()  { whiptail --backtitle "$W_BACKTITLE" --title "$1" --yesno "$2" 14 78 3>&1 1>&2 2>&3; }
-wt_input()  { whiptail --backtitle "$W_BACKTITLE" --title "$1" --inputbox "$2" 12 78 "${3:-}" 3>&1 1>&2 2>&3; }
-wt_pass()   { whiptail --backtitle "$W_BACKTITLE" --title "$1" --passwordbox "$2" 11 78 3>&1 1>&2 2>&3; }
-wt_menu()   { local title=$1; shift; local prompt=$1; shift; whiptail --backtitle "$W_BACKTITLE" --title "$title" --menu "$prompt" 18 78 8 "$@" 3>&1 1>&2 2>&3; }
-wt_msg()    { whiptail --backtitle "$W_BACKTITLE" --title "$1" --msgbox "$2" 14 78 3>&1 1>&2 2>&3; }
-
-abort_on_cancel() { [[ ${1:-0} -ne 0 ]] && { echo; info "${YW}Aborted by user.${CL}"; exit 0; }; }
+abort_on_cancel() { echo; info "${YW}Aborted by user.${CL}"; exit 0; }
+wt_yesno()  { whiptail --backtitle "$W_BACKTITLE" --title "$1" --yesno "$2" 14 78 3>&1 1>&2 2>&3 || abort_on_cancel; }
+wt_input()  { whiptail --backtitle "$W_BACKTITLE" --title "$1" --inputbox "$2" 12 78 "${3:-}" 3>&1 1>&2 2>&3 || abort_on_cancel; }
+wt_pass()   { whiptail --backtitle "$W_BACKTITLE" --title "$1" --passwordbox "$2" 11 78 3>&1 1>&2 2>&3 || abort_on_cancel; }
+wt_menu()   { local title=$1; shift; local prompt=$1; shift; whiptail --backtitle "$W_BACKTITLE" --title "$title" --menu "$prompt" 18 78 8 "$@" 3>&1 1>&2 2>&3 || abort_on_cancel; }
+wt_msg()    { whiptail --backtitle "$W_BACKTITLE" --title "$1" --msgbox "$2" 14 78 3>&1 1>&2 2>&3 || abort_on_cancel; }
 
 # ───────────────────────────────────────────────────────────────────────
 # Wizard
@@ -83,28 +82,22 @@ You'll be guided through ~10 questions. Defaults work for most setups."
   # ── LXC basics ──
   CT_ID=$(wt_input "Container ID" "Pick a free LXC ID (Proxmox VMID).
  Existing IDs are reserved — pick anything between 100 and 999." "$(pvesh get /cluster/nextid 2>/dev/null || echo 130)")
-  abort_on_cancel $?
 
   if pct status "$CT_ID" >/dev/null 2>&1; then
     fail "LXC $CT_ID already exists. Pick a different ID."
   fi
 
   CT_HOSTNAME=$(wt_input "Container hostname" "Hostname inside the LXC. Will also become the mDNS name." "spamview")
-  abort_on_cancel $?
 
   STORAGE=$(pvesm status -content rootdir 2>/dev/null | awk 'NR>1 {print $1}' | head -5 | tr '\n' ' ')
   STORAGE_DEFAULT=$(echo "$STORAGE" | awk '{print $1}')
   CT_STORAGE=$(wt_input "Storage" "Storage for the rootfs. Available: $STORAGE" "$STORAGE_DEFAULT")
-  abort_on_cancel $?
 
   CT_DISK=$(wt_input "Disk size (GB)" "Root disk size. SpamView itself is tiny (<50 MB), but allow room for SQLite growth." "8")
-  abort_on_cancel $?
 
   CT_RAM=$(wt_input "RAM (MB)" "Memory. 512 is plenty for SpamView; 1024 is comfortable." "1024")
-  abort_on_cancel $?
 
   CT_CORES=$(wt_input "CPU cores" "Number of cores." "1")
-  abort_on_cancel $?
 
   # ── Network ──
   USE_DHCP=$(whiptail --backtitle "$W_BACKTITLE" --title "Network" --menu "Network configuration mode:" 12 78 2 \
@@ -113,26 +106,19 @@ You'll be guided through ~10 questions. Defaults work for most setups."
 
   if [[ "$USE_DHCP" == "static" ]]; then
     CT_IP=$(wt_input "IP address" "Static IP for the container in CIDR notation." "192.168.1.250/24")
-    abort_on_cancel $?
     CT_GW=$(wt_input "Gateway" "Default gateway." "192.168.1.1")
-    abort_on_cancel $?
   fi
 
   CT_BRIDGE=$(wt_input "Network bridge" "Proxmox bridge interface for the LXC." "vmbr0")
-  abort_on_cancel $?
 
   CT_DNS=$(wt_input "DNS server" "Optional DNS server (empty = use Proxmox default)." "")
-  abort_on_cancel $?
 
   CT_PASSWORD=$(wt_pass "Container root password" "Root password for the LXC. Stored as a hash.")
-  abort_on_cancel $?
   [[ -z "$CT_PASSWORD" ]] && fail "Root password is required."
 
   # ── Web access ──
   AUTH_USER=$(wt_input "Web UI · username" "Username for the SpamView web UI (HTTP basic-auth)." "admin")
-  abort_on_cancel $?
   AUTH_PASS=$(wt_pass "Web UI · password" "Password for the web UI. Will be bcrypt-hashed before storage.")
-  abort_on_cancel $?
   [[ -z "$AUTH_PASS" ]] && fail "Web password is required."
 
   # ── Mailserver ──
@@ -146,19 +132,14 @@ The container will SSH into the server and run:
 Your SSH user therefore needs sudo + docker access on the mailserver."
 
   MAILSERVER_HOST=$(wt_input "Mailserver hostname" "FQDN or IP of your mailserver." "mail.example.com")
-  abort_on_cancel $?
   MAILSERVER_USER=$(wt_input "Mailserver SSH user" "User on the mailserver. Must be in sudo group with NOPASSWD or a tty-less sudoers entry for docker commands." "debian")
-  abort_on_cancel $?
   MAILCOW_PROJECT=$(wt_input "Mailcow Docker project name" "The compose project name on the mailserver. Default Mailcow installations use 'mailcowdockerized'." "mailcowdockerized")
-  abort_on_cancel $?
   MAILCOW_PATH=$(wt_input "Mailcow installation path" "Where Mailcow lives on the server (contains mailcow.conf)." "/opt/mailcow-dockerized")
-  abort_on_cancel $?
 
   IGNORE_HOSTS=$(wt_input "Ignore patterns (regex, comma-separated)" "Drop noise from your own infrastructure. Examples:
    pve\\d+\\.fritz\\.box   →  proxmox auto-notifications
    .*\\.lan                →  internal hosts
 Leave empty to keep everything." "")
-  abort_on_cancel $?
 
   # ── AI ──
   AI_ENABLE=$(whiptail --backtitle "$W_BACKTITLE" --title "AI insights (optional)" --menu "Enable Google Gemini for natural-language explanations of rejects?" 14 78 2 \
@@ -173,12 +154,10 @@ Leave empty to keep everything." "")
 The free tier is generous and SpamView caches per-pattern explanations for 30 days, so usage stays minimal."
 
     GEMINI_API_KEY=$(wt_pass "Gemini API Key" "Paste your AIza... key (or leave empty to skip).")
-    abort_on_cancel $?
   fi
 
   # ── Schedule ──
   PULL_INTERVAL=$(wt_input "Pull interval" "How often to pull from the mailserver (systemd timer syntax: 5min, 10min, 1h, …)." "10min")
-  abort_on_cancel $?
 
   # ── Summary ──
   whiptail --backtitle "$W_BACKTITLE" --title "Review" --yesno "Ready to install SpamView with these settings?
