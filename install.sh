@@ -395,10 +395,44 @@ After dismissing this dialog, you'll see a one-liner ready to copy/paste." 22 78
 # ───────────────────────────────────────────────────────────────────────
 # Main
 # ───────────────────────────────────────────────────────────────────────
+unattended_load() {
+  : "${CT_ID:?CT_ID required in unattended mode}"
+  : "${CT_HOSTNAME:?CT_HOSTNAME required}"
+  : "${CT_STORAGE:?CT_STORAGE required}"
+  CT_DISK="${CT_DISK:-8}"
+  CT_RAM="${CT_RAM:-1024}"
+  CT_CORES="${CT_CORES:-1}"
+  USE_DHCP="${USE_DHCP:-static}"
+  if [[ "$USE_DHCP" == "static" ]]; then
+    : "${CT_IP:?CT_IP required for static}"
+    : "${CT_GW:?CT_GW required for static}"
+  fi
+  CT_BRIDGE="${CT_BRIDGE:-vmbr0}"
+  CT_DNS="${CT_DNS:-}"
+  : "${CT_PASSWORD:?CT_PASSWORD required}"
+  AUTH_USER="${AUTH_USER:-admin}"
+  : "${AUTH_PASS:?AUTH_PASS required}"
+  : "${MAILSERVER_HOST:?MAILSERVER_HOST required}"
+  MAILSERVER_USER="${MAILSERVER_USER:-debian}"
+  MAILCOW_PROJECT="${MAILCOW_PROJECT:-mailcowdockerized}"
+  MAILCOW_PATH="${MAILCOW_PATH:-/opt/mailcow-dockerized}"
+  IGNORE_HOSTS="${IGNORE_HOSTS:-}"
+  GEMINI_API_KEY="${GEMINI_API_KEY:-}"
+  AI_ENABLE=$([[ -n "$GEMINI_API_KEY" ]] && echo yes || echo no)
+  PULL_INTERVAL="${PULL_INTERVAL:-10min}"
+
+  pct status "$CT_ID" >/dev/null 2>&1 && fail "LXC $CT_ID already exists."
+  info "Unattended mode — using environment variables"
+}
+
 main() {
   header
   need_root_pve
-  wizard
+  if [[ "${SPAMVIEW_UNATTENDED:-0}" == "1" ]]; then
+    unattended_load
+  else
+    wizard
+  fi
   ensure_template
   create_lxc
   install_packages

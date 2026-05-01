@@ -29,10 +29,28 @@ postscreen + rspamd + quarantine  ─SSH─►  fetcher  ─SQLite─►  Expres
 ## Install
 
 ```bash
-git clone <this-repo> spamview-installer
-cd spamview-installer
+git clone https://github.com/ruehlingdaniel/spamview.git
+cd spamview
 sudo ./install.sh
 ```
+
+### Unattended
+
+Set env vars and pass `SPAMVIEW_UNATTENDED=1`:
+
+```bash
+SPAMVIEW_UNATTENDED=1 \
+CT_ID=131 CT_HOSTNAME=spamview CT_STORAGE=local-zfs \
+CT_IP=192.168.1.97/24 CT_GW=192.168.1.1 CT_PASSWORD='secret' \
+AUTH_USER=admin AUTH_PASS='secret' \
+MAILSERVER_HOST=mail.example.com MAILSERVER_USER=debian \
+GEMINI_API_KEY='AIza...' \
+sudo -E ./install.sh
+```
+
+Required: `CT_ID, CT_HOSTNAME, CT_STORAGE, CT_PASSWORD, AUTH_PASS, MAILSERVER_HOST`.
+With `USE_DHCP=static` (default): also `CT_IP, CT_GW`.
+Optional: `CT_DISK, CT_RAM, CT_CORES, CT_BRIDGE, CT_DNS, AUTH_USER, MAILSERVER_USER, MAILCOW_PROJECT, MAILCOW_PATH, IGNORE_HOSTS, GEMINI_API_KEY, PULL_INTERVAL`.
 
 The wizard asks for ~10 inputs: LXC ID, network, root password, web-UI auth,
 mailserver hostname/user, optional Gemini key. Defaults work for most setups.
