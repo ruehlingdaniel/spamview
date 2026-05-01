@@ -9,6 +9,10 @@
 
 set -euo pipefail
 
+# sudo's env_reset strips TERM on most distros, breaking whiptail rendering.
+# Ensure something sane is always set.
+[[ -z "${TERM:-}" || "${TERM}" == "dumb" ]] && export TERM=linux
+
 # ───────────────────────────────────────────────────────────────────────
 # Style
 # ───────────────────────────────────────────────────────────────────────
@@ -60,7 +64,14 @@ need_root_pve() {
 
 # whiptail wrappers — exit cleanly on cancel
 W_BACKTITLE="SpamView Installer"
-abort_on_cancel() { echo; info "${YW}Aborted by user.${CL}"; exit 0; }
+abort_on_cancel() {
+  echo
+  echo -e "${CR} ${RD}Wizard aborted (whiptail returned non-zero).${CL}"
+  echo -e "${IN} If you didn't cancel, your terminal may not support whiptail."
+  echo -e "${IN} Try: ${DM}sudo -E ./install.sh${CL}  (preserves TERM)"
+  echo -e "${IN} Or use unattended mode — see README.md."
+  exit 1
+}
 wt_yesno()  { whiptail --backtitle "$W_BACKTITLE" --title "$1" --yesno "$2" 14 78 3>&1 1>&2 2>&3 || abort_on_cancel; }
 wt_input()  { whiptail --backtitle "$W_BACKTITLE" --title "$1" --inputbox "$2" 12 78 "${3:-}" 3>&1 1>&2 2>&3 || abort_on_cancel; }
 wt_pass()   { whiptail --backtitle "$W_BACKTITLE" --title "$1" --passwordbox "$2" 11 78 3>&1 1>&2 2>&3 || abort_on_cancel; }
